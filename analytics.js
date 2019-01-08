@@ -3,7 +3,9 @@ var watchTime = new Date();
 var infosFiles = [];
 var visitId;
 var allEls = document.querySelectorAll('*');
-var server = 'your analytics server';
+var server = 'http://192.168.8.106:4000/pk-admin';
+
+/* calls part */
 
 document.addEventListener('DOMContentLoaded', function () {
     allEls.forEach(function (el) {
@@ -30,40 +32,137 @@ document.addEventListener('DOMContentLoaded', function () {
 
 window.addEventListener('load', function () {
     loadTime = new Date() - watchTime;
-    visitId = updateCreditentials(watchTime.getTime());
+    sendVisitorsInfos(watchTime.getTime());
 	sendVisitorDatas(loadTime, infosFiles);
 });
 
-function sendVisitorDatas(loadtime, infosfiles) {
-	_ajax.post({
-		url: server + '/api/v1/visits/add',
-		datas: {loadtime: loadtime, watchingtime: watchTime.getTime(), readingpage: window.location, files: JSON.stringify(infosfiles), visitid: visitId},
-		callback: function (response) {
-            // 
-		},
-        fail: function (err) {
-            console.log(err);
+document.addEventListener('DOMContentLoaded', function () {
+    visitId = updateCreditentials(watchTime.getTime());
+});
+
+/* the ajaxer */
+
+function _ajax() {
+    /**
+     * Contains XMLHttpRequest or ActiveXObject
+     */
+    this.object = window.ActiveXObject ? new window.ActiveXObject("Msxml2.XMLHTTP") : new XMLHttpRequest();
+
+    /**
+     * Perform ajax request
+     * @param type string
+     * @param datas object
+     * @param url string
+     * @param header string
+     * @param callback scope
+     * @param fail scope
+     * @param timeout integer
+     */
+    this.query = function (type, datas, url, header, callback, fail, timeout) {
+        this.object.open(type, url, true);
+        
+        /* filter post request */
+        if (type.toLowerCase() == 'post') {
+
+            this.object.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+            var stringvalues = [];
+
+            for(var a in datas) {
+                stringvalues.push(a+'='+datas[a]);
+            }
+
+            datas = stringvalues.join('&').toString();
         }
-	});
+
+        /* onload event firing */
+        this.object.onload = function () {
+            if (this.status == 200) {
+                if (callback) callback(this.responseText);
+            }
+            else {
+                if (fail) fail("Une erreur s'est produite. CODE: "+this.status, this.status);
+            }
+        };
+
+        /* onerror event firing */
+        this.object.onerror = function () {
+            if (fail) fail("Une erreur s'est produite. CODE: "+this.status, this.status);
+        };
+
+        /* timeout error event firing */
+        this.object.ontimeout = function () {
+            if (fail) fail("Une erreur s'est produite. CODE: TIMEOUT ERROR");
+        };
+
+        this.object.timeout = timeout ? timeout : this.timeout;
+
+        // alert(datas);
+        this.object.send(datas);
+    }
+
+    /**
+     * Perform post requests
+     * @param options object
+     */
+    this.post = function (options) {
+        this.query('post', options.datas, options.url, options.header, options.callback, options.fail, options.timeout);
+    }
+
+    /**
+     * Perform get requests
+     * @param options object
+     */
+    this.get = function (options) {
+        this.query('get', null, options.url, options.header, options.callback, options.fail, options.timeout);
+    }
 }
 
-function sendClickEvent(evt) {
-    _ajax.post({
-        url: server + '/api/v1/clicks/add',
-        datas: {element: evt.target.nodeName, link: evt.target.href||evt.target.src||null, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
+/* actions handling part */
+
+function sendVisitorDatas(loadtime, infosfiles) {
+    var q = new _ajax();
+    q.post({
+		url: server + '/api/v1/visits/add',
+		datas: {loadtime: loadtime, watchingtime: watchTime.getTime(), readingpage: window.location, files: JSON.stringify(infosfiles), visitid: visitId},
+        callback: function (response) { }, fail: function (err) { console.log(err) }
+    });
+}
+
+function sendVisitorsInfos(watchtime) {
+    var q = new _ajax();
+    q.get({
+        url: 'http://analytics.constantmissa.ci/pk-admin/api/get-asker-info',
         callback: function (response) {
-            console.log(JSON.parse(response));
+            values = response;
+            console.log(values); return;
+            _ajax.post({
+                url: server + '/api/v1/visitors/add',
+                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response},
+                callback: function (response) { }, fail: function (err) { console.log(err) }
+            });
+        },
+        fail: function (err) {
+            console.log(err);
         }
     });
 }
 
+function sendClickEvent(evt) {
+    var q = new _ajax();
+    q.post({
+        url: server + '/api/v1/clicks/add',
+        datas: {element: evt.target.nodeName, link: evt.target.href||evt.target.src||null, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
+        callback: function (response) { }, fail: function (err) { console.log(err) }
+    });
+}
+
 function sendFilledFieldEvent(evt) {
-    _ajax.post({
+    var q = new _ajax();
+    q.post({
         url: server + '/api/v1/filled/add',
         datas: {element: evt.target.nodeName, fieldname: evt.target.name, value: evt.target.value, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
-        callback: function (response) {
-            console.log(JSON.parse(response));
-        }
+        callback: function (response) { }, fail: function (err) { console.log(err) }
     });
 }
 
@@ -121,8 +220,9 @@ var _ajax = {
     },
 
     query: function (type, datas, url, header, callback, fail, timeout) {
-        this.object.open(type, url);
 
+        this.object.open(type, url, true);
+        
         if (type.toLowerCase() == 'post') {
 
             this.object.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
