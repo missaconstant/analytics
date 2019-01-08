@@ -40,6 +40,94 @@ document.addEventListener('DOMContentLoaded', function () {
     visitId = updateCreditentials(watchTime.getTime());
 });
 
+/* actions handling part */
+
+function sendVisitorDatas(loadtime, infosfiles) {
+    var q = new _ajax();
+    q.post({
+		url: server + '/api/v1/visits/add',
+		datas: {loadtime: loadtime, watchingtime: watchTime.getTime(), readingpage: window.location, files: JSON.stringify(infosfiles), visitid: visitId},
+        callback: function (response) { }, fail: function (err) { console.log(err) }
+    });
+}
+
+function sendVisitorsInfos(watchtime) {
+    var q = new _ajax();
+    q.get({
+        url: 'http://analytics.constantmissa.ci/pk-admin/api/get-asker-info',
+        callback: function (response) {
+            var values = JSON.parse(response);
+            var q = new _ajax();
+            q.post({
+                url: server + '/api/v1/visitors/add',
+                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response},
+                callback: function (response) { }, fail: function (err) { console.log(err) }
+            });
+        },
+        fail: function (err) {
+            console.log(err);
+        }
+    });
+}
+
+function sendClickEvent(evt) {
+    var q = new _ajax();
+    q.post({
+        url: server + '/api/v1/clicks/add',
+        datas: {element: evt.target.nodeName, link: evt.target.href||evt.target.src||null, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
+        callback: function (response) { }, fail: function (err) { console.log(err) }
+    });
+}
+
+function sendFilledFieldEvent(evt) {
+    var q = new _ajax();
+    q.post({
+        url: server + '/api/v1/filled/add',
+        datas: {element: evt.target.nodeName, fieldname: evt.target.name, value: evt.target.value, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
+        callback: function (response) { }, fail: function (err) { console.log(err) }
+    });
+}
+
+function updateCreditentials(visittime) {
+    if (document.cookie) {
+        if (c = checkCreditentials("visit")) {
+            var old = new Date();
+                old.setTime(parseInt(c));
+            if ((new Date() - old) > (24*60*60*1000)) {
+                setCookie(1, 'visit', visittime);
+                return visittime;
+            }
+            else {
+                return c;
+            }
+        }
+        else {
+            setCookie(1, 'visit', visittime);
+            return visittime;
+        }
+    }
+}
+
+function checkCreditentials(name) {
+    var cookie = decodeURIComponent(document.cookie).split(';');
+    
+    for (var i=0; i<cookie.length; i++) {
+        var part = cookie[i].trim();
+
+        if (part.indexOf(name) != -1) {
+            return part.split('=')[1];
+        }
+    }
+}
+
+function setCookie(length, name, value) {
+    var expires;
+    var d = new Date();
+    d.setTime(d.getTime() + (370 * 24 * 60 * 60 * 1000));
+    expires = "expires=" + d.toUTCString();
+    document.cookie = name + "=" + value + ";" + expires + ";path=/";
+}
+
 /* the ajaxer */
 
 function _ajax() {
@@ -117,145 +205,3 @@ function _ajax() {
         this.query('get', null, options.url, options.header, options.callback, options.fail, options.timeout);
     }
 }
-
-/* actions handling part */
-
-function sendVisitorDatas(loadtime, infosfiles) {
-    var q = new _ajax();
-    q.post({
-		url: server + '/api/v1/visits/add',
-		datas: {loadtime: loadtime, watchingtime: watchTime.getTime(), readingpage: window.location, files: JSON.stringify(infosfiles), visitid: visitId},
-        callback: function (response) { }, fail: function (err) { console.log(err) }
-    });
-}
-
-function sendVisitorsInfos(watchtime) {
-    var q = new _ajax();
-    q.get({
-        url: 'http://analytics.constantmissa.ci/pk-admin/api/get-asker-info',
-        callback: function (response) {
-            values = response;
-            console.log(values); return;
-            _ajax.post({
-                url: server + '/api/v1/visitors/add',
-                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response},
-                callback: function (response) { }, fail: function (err) { console.log(err) }
-            });
-        },
-        fail: function (err) {
-            console.log(err);
-        }
-    });
-}
-
-function sendClickEvent(evt) {
-    var q = new _ajax();
-    q.post({
-        url: server + '/api/v1/clicks/add',
-        datas: {element: evt.target.nodeName, link: evt.target.href||evt.target.src||null, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
-        callback: function (response) { }, fail: function (err) { console.log(err) }
-    });
-}
-
-function sendFilledFieldEvent(evt) {
-    var q = new _ajax();
-    q.post({
-        url: server + '/api/v1/filled/add',
-        datas: {element: evt.target.nodeName, fieldname: evt.target.name, value: evt.target.value, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
-        callback: function (response) { }, fail: function (err) { console.log(err) }
-    });
-}
-
-function updateCreditentials(visittime) {
-    if (document.cookie) {
-        if (c = checkCreditentials("visit")) {
-            var old = new Date();
-                old.setTime(parseInt(c));
-            if ((new Date() - old) > (24*60*60*1000)) {
-                setCookie(1, 'visit', visittime);
-                return visittime;
-            }
-            else {
-                return c;
-            }
-        }
-        else {
-            setCookie(1, 'visit', visittime);
-            return visittime;
-        }
-    }
-}
-
-function checkCreditentials(name) {
-    var cookie = decodeURIComponent(document.cookie).split(';');
-    
-    for (var i=0; i<cookie.length; i++) {
-        var part = cookie[i].trim();
-
-        if (part.indexOf(name) != -1) {
-            return part.split('=')[1];
-        }
-    }
-}
-
-function setCookie(length, name, value) {
-    var expires;
-    var d = new Date();
-    d.setTime(d.getTime() + (370 * 24 * 60 * 60 * 1000));
-    expires = "expires=" + d.toUTCString();
-    document.cookie = name + "=" + value + ";" + expires + ";path=/";
-}
-
-var _ajax = {
-    object: window.ActiveXObject ? new window.ActiveXObject("Msxml2.XMLHTTP") : new XMLHttpRequest(),
-
-    timeout: 3000,
-
-    post: function (options) {
-        this.query('post', options.datas, options.url, options.header, options.callback, options.fail, options.timeout);
-    },
-
-    get: function (options) {
-        this.query('get', null, options.url, options.header, options.callback, options.fail, options.timeout);
-    },
-
-    query: function (type, datas, url, header, callback, fail, timeout) {
-
-        this.object.open(type, url, true);
-        
-        if (type.toLowerCase() == 'post') {
-
-            this.object.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-
-            var stringvalues = [];
-
-            for(var a in datas) {
-                stringvalues.push(a+'='+datas[a]);
-            }
-
-            datas = stringvalues.join('&').toString();
-        }
-
-        this.object.onload = function () {
-            if (this.status == 200) {
-                if (callback) callback(this.responseText);
-            }
-            else {
-                if (fail) fail("Une erreur s'est produite. CODE: "+this.status, this.status);
-            }
-        };
-
-        this.object.onerror = function () {
-            if (fail) fail("Une erreur s'est produite. CODE: "+this.status, this.status);
-        };
-
-        this.object.ontimeout = function () {
-            if (fail) fail("Une erreur s'est produite. CODE: TIMEOUT ERROR");
-        };
-
-        this.object.timeout = timeout ? timeout : this.timeout;
-
-        // alert(datas);
-        this.object.send(datas);
-    }
-};
