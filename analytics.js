@@ -3,6 +3,7 @@ var watchTime = new Date();
 var infosFiles = [];
 var visitId;
 var allEls = document.querySelectorAll('*');
+var server = 'your analytics server';
 
 document.addEventListener('DOMContentLoaded', function () {
     allEls.forEach(function (el) {
@@ -18,6 +19,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 sendClickEvent(e);
             }
         });
+        /* filled form field event */
+        el.addEventListener('blur', function (e) {
+            if (e.target.value && e.target.value.trim().length) {
+                sendFilledFieldEvent(e);
+            }
+        });
     });
 });
 
@@ -29,7 +36,7 @@ window.addEventListener('load', function () {
 
 function sendVisitorDatas(loadtime, infosfiles) {
 	_ajax.post({
-		url: 'http://192.168.8.106:9000/api/v1/visits/add',
+		url: server + '/api/v1/visits/add',
 		datas: {loadtime: loadtime, watchingtime: watchTime.getTime(), readingpage: window.location, files: JSON.stringify(infosfiles), visitid: visitId},
 		callback: function (response) {
             // 
@@ -42,8 +49,18 @@ function sendVisitorDatas(loadtime, infosfiles) {
 
 function sendClickEvent(evt) {
     _ajax.post({
-        url: 'http://192.168.8.106:9000/api/v1/clicks/add',
+        url: server + '/api/v1/clicks/add',
         datas: {element: evt.target.nodeName, link: evt.target.href||evt.target.src||null, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
+        callback: function (response) {
+            console.log(JSON.parse(response));
+        }
+    });
+}
+
+function sendFilledFieldEvent(evt) {
+    _ajax.post({
+        url: server + '/api/v1/filled/add',
+        datas: {element: evt.target.nodeName, fieldname: evt.target.name, value: evt.target.value, domid: evt.target.id, domclass: evt.target.className, readingpage: window.location, pagewatchingtime: watchTime.getTime(), clicktime: new Date().getTime(), visitid: visitId},
         callback: function (response) {
             console.log(JSON.parse(response));
         }
