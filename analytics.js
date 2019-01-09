@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 window.addEventListener('load', function () {
     loadTime = new Date() - watchTime;
-    sendVisitorsInfos(watchTime.getTime());
+    sendVisitorsInfos(watchTime.getTime(), visitId);
 	sendVisitorDatas(loadTime, infosFiles);
 });
 
@@ -51,7 +51,7 @@ function sendVisitorDatas(loadtime, infosfiles) {
     });
 }
 
-function sendVisitorsInfos(watchtime) {
+function sendVisitorsInfos(watchtime, visitid) {
     var q = new _ajax();
     q.get({
         url: 'http://analytics.constantmissa.ci/pk-admin/api/get-asker-info',
@@ -60,7 +60,7 @@ function sendVisitorsInfos(watchtime) {
             var q = new _ajax();
             q.post({
                 url: server + '/api/v1/visitors/add',
-                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response},
+                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response, visitid: visitid},
                 callback: function (response) { }, fail: function (err) { console.log(err) }
             });
         },
