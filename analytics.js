@@ -60,7 +60,7 @@ function sendVisitorsInfos(watchtime, visitid) {
             var q = new _ajax();
             q.post({
                 url: server + '/api/v1/visitors/add',
-                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response, visitid: visitid},
+                datas: {watchingtime: watchtime, remote: values.query, country: values.country, city: values.city, allinfos: response, visitid: visitid, readingpage: window.location},
                 callback: function (response) { }, fail: function (err) { console.log(err) }
             });
         },
@@ -105,6 +105,9 @@ function updateCreditentials(visittime) {
             setCookie(1, 'visit', visittime);
             return visittime;
         }
+    }
+    else {
+        return visittime;
     }
 }
 
